@@ -1,0 +1,27 @@
+1. How to Program pro mini 3.3v with arduino nano
+	-https://forum.sparkfun.com/viewtopic.php?f=32&t=27960
+	-see nano-promini-programmer_bb.png for working connections
+	
+Nano---------------Pro Mini
+3.3v-----------------------VCC
+GND------------------------GND
+Digital Pin 11(MOSI)----pin 11 (MOSI)
+Digital Pin 12(MISO)----pin 12 (MISO)
+Digital Pin 13(SCK)-----pin 13 (SCK)
+Digital Pin 10----------RST	
+
+2. make radios talk together (rf24 lib)
+
+https://maniacbug.wordpress.com/2011/11/02/getting-started-rf24/
+
+3. integrate ldr
+
+4. display
+
+There were some problems with the silkscreen, see following link for checking your display module type:
+
+Nokia 5110 PCD8544 type 2 (http://serdisplib.sourceforge.net/ser/pcd8544.html)
+
+              RES  CS  D/C  SI/DIN  CLK  VCC  LED  GND
+display pin    1    2   3     4      5    6    7    8
+arduino pin    3    4   5     6      7   3v3   6   GND
