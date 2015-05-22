@@ -1,2 +1,2 @@
 # Electricity-info-display
-Electricity info display with Arduinos, radios &amp; mandatory led
+Electricity info display with Arduinos, radios &amp; mandatory LED
