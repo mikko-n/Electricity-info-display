@@ -1,5 +1,5 @@
 /*
-* Based on several tutorials & getting Started example sketch for nRF24L01+ radios
+* Based on several tutorials & getting started example sketch for nRF24L01+ radios
 *
 * Firmware for Energy meter infodisplay unit, using
 * Arduino Pro Mini, Nokia 5110 display & nRF24L01 radio
@@ -33,17 +33,20 @@ byte addresses[][6] = {"1Node","2Node"};
 // with two radios and just one-direction messaging, this could be !radioNumber
 bool role = 1;
 
+// data struct, changes here require an update to the receiver sketch, too
+// note: sending 'String' type values does not work as intended, maybe a byte array should be used?
 struct dataStruct{
-  unsigned long _millis; // request timestamp
-  String sender; // sending node id
-  String receiver; // to who this packet is intended to
-  
-  // NOTE !!! these are int values and thus cumulative number overflows quite quickly. There is no sense
-  // to track a house electricity consumption at single watt resolution
-  unsigned int currentWatts;  // divide by 10 to get correct wattage
-  unsigned int cumulative; // overflows, TODO implement counters for kW / smaller watt amounts
-  
+	unsigned long _millis; // request timestamp
+	String sender; // sending node id
+	String receiver; // to who this packet is intended to
+	unsigned int currentWatts;
+	unsigned int cumulative_kW; // cumulative values divided to kW / W
+	unsigned int cumulative_W;  // otherwise they will overflow quite quickly
+	
 } myData;
+
+// price per kwh, from energy company
+float price_per_kwh = 0.11f;
 
 void setup() {
   Serial.begin(57600);
@@ -71,9 +74,10 @@ void initRadio() {
   radio.begin();
 
   // Set the PA Level below maximum to prevent power supply related issues. Soldering a small cap between
-  // the modules GND/Vin could help if those appear (do an internet search for solutions)
+  // the modules GND/Vin could help if those appear (do an internet search for solutions).
   // Because the close proximity of the devices, no need to use RF24_PA_MAX, which is default.
   // Available options are: RF24_PA_MIN, RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX
+  // So far no problems.
   radio.setPALevel(RF24_PA_HIGH);
   
   // Open a writing and reading pipe on each radio, with opposite addresses
@@ -122,19 +126,9 @@ if (role == 1)  {
         
     if ( timeout ){                                             // Describe the results
         //Serial.println(F("Failed, response timed out."));
-    }else{
+    } else {
         unsigned long got_time;                                // Grab the response, compare, and send to debug print
-     /*  
-         Struct for memory aid
-         
-         struct dataStruct{
-          unsigned long _millis; // request timestamp
-          String sender; // sending node id
-          String receiver; // to who this packet is intended to
-          unsigned int currentWatts;  
-          unsigned int cumulative;  
-        } myData;
-     */ 
+     
         radio.read( &myData, sizeof(myData) );
 
         doInfoDisplay();         
@@ -149,9 +143,11 @@ if (role == 1)  {
         Serial.print(", requested at: ");
         Serial.print(myData._millis);  
         Serial.print(", current kWh = ");
-        Serial.print((double)myData.currentWatts/10.0);
+        Serial.print((double)myData.currentWatts);
         Serial.print(", cumulative W = ");
-        Serial.println(myData.cumulative); 
+		Serial.print(myData.cumulative_kW);
+		Serial.print(" ");
+        Serial.println(myData.cumulative_W); 
         Serial.print(F(". Round-trip delay "));
         Serial.print(millis()-got_time);
         Serial.println(F(" milliseconds"));
@@ -186,9 +182,9 @@ void doInfoDisplay() {
   display.println("e");
   
   
-  if (myData.currentWatts) {
+  if (myData.currentWatts > 0) {
      display.setTextSize(2);
-     float current = (float)myData.currentWatts/10.0f; 
+     float current = (float)myData.currentWatts; 
      display.setCursor(30,0);
      display.println((int)current);
   } else {
@@ -196,12 +192,22 @@ void doInfoDisplay() {
      display.setCursor(30,0);
      display.println('-');
   }
-  if (myData.cumulative) {
+  
+  if (myData.cumulative_W > 0) {
+	 String cumulative;	 
+
+	 // check the kW value for display purposes
+	 if (myData.cumulative_kW > 0) {
+		cumulative = myData.cumulative_kW + " " + myData.cumulative_W;
+	 } else {
+		cumulative = String(myData.cumulative_W);
+	 }
+
      display.setTextSize(1);
-     display.setCursor(30,16);
-     display.println(myData.cumulative);
+     display.setCursor(30,16);	 	 
+     display.println(cumulative);
      display.setCursor(30,25);
-     float money = (float)myData.cumulative * 0.11f / 1000.0f; // .11 is the energy company price for kW
+     float money = ((float)myData.cumulative_kW * 0.11f) + ((float)myData.cumulative_W * price_per_kwh / 1000.0f);
      display.println(money); 
   } else {
      display.setTextSize(1);
@@ -210,5 +216,6 @@ void doInfoDisplay() {
      display.setCursor(30,25);
      display.println('-');
   }
+  
   display.display();
 }

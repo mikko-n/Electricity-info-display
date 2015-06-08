@@ -49,7 +49,8 @@ struct dataStruct{
   String sender; // sending node id
   String receiver; // to who this packet is intended to
   unsigned int currentWatts;  
-  unsigned int cumulative; // will overflow
+  unsigned int cumulative_kW; // cumulative values divided to kW / W
+  unsigned int cumulative_W;  // otherwise they will overflow quite quickly
   
 } myData;
 
@@ -63,7 +64,8 @@ void setup() {
   myData.sender = "Wattmeter";
   myData.receiver = "Server";
   myData.currentWatts = 0;
-  myData.cumulative = 0;
+  myData.cumulative_kW = 0;
+  myData.cumulative_W = 0;
   radio.begin();
 
   // Set the PA Level below maximum to prevent power supply related issues. Soldering a small cap between
@@ -116,10 +118,16 @@ void doMeasurements() {
     
     
     if (chan1_delta != 0 && chan1_count != 0) {
+		// Power (kW) = 3600 (secs in 1hr) divided by (the seconds between flashes * number of Imp/kWh printed on meter
+		// Simplified to show watts based on 1000 Imp/Kwh:
+		// watts = 3600 / (interval * 1000) * 1000;
+		
+		chan1_watts = ms_per_hour / (chan1_delta * 1000) * 1000;
+		
       // calculate current wattage
       //             = (counted pulses - 1) * watts per pulse * ms in hour / time since last pulse
       // NOTE !!! this is an int value, divide by 10 to get correct wattage!!!
-      chan1_watts = (chan1_count - 1) * w_per_pulse * ms_per_hour / chan1_delta;
+      //chan1_watts = (chan1_count - 1) * w_per_pulse * ms_per_hour / chan1_delta;
 
       // current consumption calculated, reset counter
       chan1_count = 0; 
@@ -164,7 +172,14 @@ void doMeasurements() {
     isLedOn = true;
     digitalWrite(led, HIGH); // turn indicator led on
     
-    myData.cumulative++;
+    myData.cumulative_W++;
+	
+	// check if kW counter should be updated
+	if (myData.cumulative_W >= 1000) {
+		myData.cumulative_kW++;
+		myData.cumulative_W = 0;
+	}
+	
     lastMeasurement = millis();
   } 
   else {
@@ -209,7 +224,9 @@ void reportValues() {
       Serial.print(", ");
       Serial.print(myData.currentWatts);
       Serial.print(", ");
-      Serial.println(myData.cumulative); 
+      Serial.print(myData.cumulative_kW); 
+	  Serial.print(", ");
+	  Serial.println(myData.cumulative_W);
    }
  }
 
