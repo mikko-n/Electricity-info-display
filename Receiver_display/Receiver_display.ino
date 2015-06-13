@@ -166,54 +166,58 @@ void doInfoDisplay() {
   
   display.clearDisplay();
   display.setTextSize(1); // height 7px
-  display.setCursor(2,0);
+  display.setCursor(0,0);
   display.println(currentWatts);
-  display.setCursor(2,16);
+  display.setCursor(0,16);
   display.println(yhteensa);
   
-  display.setTextSize(2); // height 14px
-  display.setCursor(66,0);
+  // current consumption unit (kWh)
+  display.setTextSize(2); // height 14px, width 10px
+  display.setCursor(74,0); // 84(screen width)-10px
   display.println("W");
+  display.setTextSize(1); // height 7px, width 5px
+  display.setCursor(68,0); // 74-6px, see above
+  display.println("k");
+  display.setCursor(68,8); // 7px + 1px margin
+  display.println("h");
   
+  // total units
   display.setTextSize(1);
-  display.setCursor(66,16); // 14px + 2px margin
-  display.println("W");
-  display.setCursor(66,25);
+  display.setCursor(68,16); // x-axis, see above / y = 14px + 2px margin
+  display.println("kW");
+  display.setCursor(74,25);
   display.println("e");
-  
-  
+    
+  display.setCursor(24,0);
+  display.setTextSize(2);
   if (myData.currentWatts > 0) {
      display.setTextSize(2);
-     float current = (float)myData.currentWatts; 
-     display.setCursor(30,0);
+     float current = (float)myData.currentWatts;      
      display.println((int)current);
-  } else {
-     display.setTextSize(2);
-     display.setCursor(30,0);
+  } else {    
      display.println('-');
   }
   
-  if (myData.cumulative_W > 0) {
-	 String cumulative;	 
-
+  display.setTextSize(1);
+  display.setCursor(24,16);
+  if (myData.cumulative_W > 0) {	 
 	 // check the kW value for display purposes
 	 if (myData.cumulative_kW > 0) {
-		cumulative = myData.cumulative_kW + " " + myData.cumulative_W;
+		 float cumulative_kW =(float)myData.cumulative_kW; // do some typecasting just to look silly
+		 display.print((int)cumulative_kW+"."); // and not to get random pointer values from struct printed out
 	 } else {
-		cumulative = String(myData.cumulative_W);
+		 display.print("0.");
 	 }
-
-     display.setTextSize(1);
-     display.setCursor(30,16);	 	 
-     display.println(cumulative);
-     display.setCursor(30,25);
+	 
+	 float cumulative_W = (float)myData.cumulative_W;
+	 display.println((int)cumulative_W);
+	      	 
+     display.setCursor(24,25);
      float money = ((float)myData.cumulative_kW * 0.11f) + ((float)myData.cumulative_W * price_per_kwh / 1000.0f);
      display.println(money); 
-  } else {
-     display.setTextSize(1);
-     display.setCursor(30,16);
+  } else {     
      display.println('-');
-     display.setCursor(30,25);
+     display.setCursor(24,25);
      display.println('-');
   }
   
